@@ -10,15 +10,17 @@ import shutil
 import sys
 from datetime import date, datetime, timedelta
 from time import sleep
-
+import re
 from absl import app, flags
 from tqdm import tqdm
-
+from lxml import etree
 from . import config_util, datetime_util
 from .downloader import AvatarPictureDownloader
 from .parser import AlbumParser, IndexParser, PageParser, PhotoParser
 from .user import User
-
+import requests
+from .parser.util import handle_html, string_to_int
+import sys
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('config_path', None, 'The path to config.json.')
@@ -153,7 +155,7 @@ class Spider:
             self._get_filepath('img'),
             self.file_download_timeout).handle_download(pic_urls)
 
-    def get_weibo_info(self):
+    def get_weibo_info(self,keys=""):
         """获取微博信息"""
         try:
             since_date = datetime_util.str_to_time(
@@ -181,7 +183,7 @@ class Spider:
                 for page in tqdm(range(1, page_num + 1), desc='Progress'):
                     weibos, self.weibo_id_list, to_continue = PageParser(
                         self.cookie,
-                        self.user_config, page, self.filter).get_one_page(
+                        self.user_config, page, self.filter,keys).get_one_page(
                             self.weibo_id_list)  # 获取第page页的全部微博
                     logger.info(
                         u'%s已获取%s(%s)的第%d页微博%s',
@@ -310,7 +312,7 @@ class Spider:
                 VideoDownloader(self._get_filepath('video'),
                                 self.file_download_timeout))
 
-    def get_one_user(self, user_config):
+    def get_one_user(self, user_config,keys=""):
         """获取一个用户的微博"""
         try:
             self.get_user_info(user_config['user_uri'])
@@ -325,7 +327,7 @@ class Spider:
             # if self.pic_download:
             #     self.download_user_avatar(user_config['user_uri'])
 
-            for weibos in self.get_weibo_info():
+            for weibos in self.get_weibo_info(keys):
                 self.write_weibo(weibos)
                 self.got_num += len(weibos)
             if not self.filter:
@@ -337,7 +339,7 @@ class Spider:
         except Exception as e:
             logger.exception(e)
 
-    def start(self):
+    def start(self,keys=""):
         """运行爬虫"""
         try:
             if not self.user_config_list:
@@ -353,9 +355,11 @@ class Spider:
                     user_count1 = user_count
                     random_users = random.randint(*self.random_wait_pages)
                 user_count += 1
-                self.get_one_user(user_config)
+                self.get_one_user(user_config,keys)
         except Exception as e:
             logger.exception(e)
+
+
 
 
 def _get_config():
@@ -381,16 +385,22 @@ def _get_config():
                      u'https://github.com/dataabc/weiboSpider#2程序设置')
         sys.exit()
 
-
-def main(_):
+def main(argv):
     try:
         config = _get_config()
         config_util.validate_config(config)
         wb = Spider(config)
-        wb.start()  # 爬取微博信息
+        #print(keys[1])
+        if len(argv) > 0:
+            print(argv[1])
+            wb.start(argv[1])
+        else:
+            wb.start()  # 爬取微博信息
+        # wb.get_userid_keyword("俄罗斯")
     except Exception as e:
         logger.exception(e)
 
 
 if __name__ == '__main__':
-    app.run(main)
+    app.run(main())
+

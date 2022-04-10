@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 from datetime import datetime, timedelta
-
+import time
 from .. import datetime_util
 from ..weibo import Weibo
 from .comment_parser import CommentParser
@@ -16,7 +16,7 @@ logger = logging.getLogger('spider.page_parser')
 class PageParser(Parser):
     empty_count = 0
 
-    def __init__(self, cookie, user_config, page, filter):
+    def __init__(self, cookie, user_config, page, filter,keys=""):
         self.cookie = cookie
         if hasattr(PageParser,
                    'user_uri') and self.user_uri != user_config['user_uri']:
@@ -25,7 +25,11 @@ class PageParser(Parser):
         self.since_date = user_config['since_date']
         self.end_date = user_config['end_date']
         self.page = page
-        self.url = 'https://weibo.cn/%s?page=%d' % (self.user_uri, page)
+        if keys == "":
+            self.url = 'https://weibo.cn/%s?page=%d' % (self.user_uri, page)
+        else:
+            self.url = 'https://weibo.cn/1499104401/profile?keyword=%s&hasori=0&haspic=0&advancedfilter=1&page=%d' % (keys,page)
+        print("self.url:",self.url)
         if self.end_date != 'now':
             since_date = self.since_date.split(' ')[0].split('-')
             end_date = self.end_date.split(' ')[0].split('-')
@@ -58,6 +62,8 @@ class PageParser(Parser):
         """获取第page页的全部微博"""
         try:
             info = self.selector.xpath("//div[@class='c']")
+            # print(self.selector.xpath("//div[@class='c']/text()"))
+            # print("info: ",info)
             is_exist = info[0].xpath("div/span[@class='ctt']")
             weibos = []
             if is_exist:

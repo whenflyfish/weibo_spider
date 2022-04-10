@@ -36,6 +36,7 @@ class IndexParser(Parser):
             self.user.id = user_id
 
             user_info = self.selector.xpath("//div[@class='tip2']/*/text()")
+            print(user_info)
             self.user.weibo_num = string_to_int(user_info[0][3:-1])
             self.user.following = string_to_int(user_info[1][3:-1])
             self.user.followers = string_to_int(user_info[2][3:-1])
