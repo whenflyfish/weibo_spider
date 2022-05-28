@@ -14,13 +14,14 @@ import re
 from absl import app, flags
 from tqdm import tqdm
 from lxml import etree
-from . import config_util, datetime_util
+from . import config_util, datetime_util, read_args
 from .downloader import AvatarPictureDownloader
 from .parser import AlbumParser, IndexParser, PageParser, PhotoParser
 from .user import User
 import requests
 from .parser.util import handle_html, string_to_int
 import sys
+import argparse
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('config_path', None, 'The path to config.json.')
@@ -226,7 +227,7 @@ class Spider:
         except Exception as e:
             logger.exception(e)
 
-    def _get_filepath(self, type):
+    def _get_filepath(self, type,path=""):
         """获取结果文件路径"""
         try:
             # dir_name = self.user.nickname
@@ -237,7 +238,11 @@ class Spider:
             # else:
             #     # file_dir = (os.getcwd() + os.sep + 'weibo' + os.sep + dir_name)
             #     file_dir = (os.getcwd() + os.sep + 'weibo')
-            file_dir = 'D:\data\spider\weibo' + os.sep + "weibo" + str(date.today().strftime("%Y%m%d"))
+            # print("path: ",path)
+            if path == "":
+                file_dir = 'D:\data\spider\weibo' + os.sep + "weibo" + str(date.today().strftime("%Y%m%d"))
+            else:
+                file_dir = path
             if type == 'img' or type == 'video':
                 file_dir = file_dir + os.sep + type
             if not os.path.isdir(file_dir):
@@ -251,7 +256,7 @@ class Spider:
         except Exception as e:
             logger.exception(e)
 
-    def initialize_info(self, user_config):
+    def initialize_info(self, user_config,scene=""):
         """初始化爬虫信息"""
         self.got_num = 0
         self.user_config = user_config
@@ -274,7 +279,7 @@ class Spider:
         if 'json' in self.write_mode:
             from .writer import JsonWriter
 
-            self.writers.append(JsonWriter(self._get_filepath('json')))
+            self.writers.append(JsonWriter(self._get_filepath('json',scene)))
         if 'mysql' in self.write_mode:
             from .writer import MySqlWriter
 
@@ -294,32 +299,34 @@ class Spider:
             self.writers.append(KafkaWriter(self.kafka_config))
 
         self.downloaders = []
+        # print("self._get_filepath('img'): ",self._get_filepath('img'))
+
         if self.pic_download == 1:
             from .downloader import (OriginPictureDownloader,
                                      RetweetPictureDownloader)
 
             self.downloaders.append(
-                OriginPictureDownloader(self._get_filepath('img'),
+                OriginPictureDownloader(self._get_filepath('img',scene),
                                         self.file_download_timeout))
         if self.pic_download and not self.filter:
             self.downloaders.append(
-                RetweetPictureDownloader(self._get_filepath('img'),
+                RetweetPictureDownloader(self._get_filepath('img',scene),
                                          self.file_download_timeout))
         if self.video_download == 1:
             from .downloader import VideoDownloader
 
             self.downloaders.append(
-                VideoDownloader(self._get_filepath('video'),
+                VideoDownloader(self._get_filepath('video',scene),
                                 self.file_download_timeout))
 
-    def get_one_user(self, user_config,keys=""):
+    def get_one_user(self, user_config,keys="",scene=""):
         """获取一个用户的微博"""
         try:
             self.get_user_info(user_config['user_uri'])
             logger.info(self.user)
             logger.info('*' * 100)
 
-            self.initialize_info(user_config)
+            self.initialize_info(user_config,scene)
             self.write_user(self.user)
             logger.info('*' * 100)
 
@@ -339,7 +346,7 @@ class Spider:
         except Exception as e:
             logger.exception(e)
 
-    def start(self,keys=""):
+    def start(self,keys="",scene=""):
         """运行爬虫"""
         try:
             if not self.user_config_list:
@@ -355,7 +362,7 @@ class Spider:
                     user_count1 = user_count
                     random_users = random.randint(*self.random_wait_pages)
                 user_count += 1
-                self.get_one_user(user_config,keys)
+                self.get_one_user(user_config,keys,scene)
         except Exception as e:
             logger.exception(e)
 
@@ -386,21 +393,41 @@ def _get_config():
         sys.exit()
 
 def main(argv):
+
     try:
+        print("len(argv)： ",len(argv))
+        # 2建立解析对象
+        # parser = argparse.ArgumentParser()
+        #
+        # # 3增加属性
+        # parser.add_argument("--keyword", help="search keyword")
+        # parser.add_argument("--scene", help = "storage location")
+
+        # 4属性赋予实例args
+        # args = parser.parse_args()
+        # keyword = args.keyword
+        # scene = args.scene
+        # print("keyword: ",keyword)
+        # print("scene: ",scene)
+
         config = _get_config()
         config_util.validate_config(config)
         wb = Spider(config)
         #print(keys[1])
         if len(argv) > 0:
-            print(argv[1])
-            wb.start(argv[1])
+            assert len(argv) == 3 , "同时传入keyword 和 scene"
+            # print(argv[2])
+            # print(argv[1])
+            wb.start(keys=argv[1],scene=argv[2])
         else:
             wb.start()  # 爬取微博信息
         # wb.get_userid_keyword("俄罗斯")
     except Exception as e:
-        logger.exception(e)
+        print(e)
 
 
 if __name__ == '__main__':
-    app.run(main())
+    print("read arg")
+    # read_args.read_arg()
+    main()
 
