@@ -18,9 +18,11 @@ from . import config_util, datetime_util, read_args
 from .downloader import AvatarPictureDownloader
 from .parser import AlbumParser, IndexParser, PageParser, PhotoParser
 from .user import User
+from .parser.forward_tree import structure_tree
 import requests
 from .parser.util import handle_html, string_to_int
 import sys
+import time
 import argparse
 FLAGS = flags.FLAGS
 
@@ -195,6 +197,7 @@ class Spider:
                         '-' * 30,
                     )
                     self.page_count += 1
+
                     if weibos:
                         yield weibos
                     if not to_continue:
@@ -337,6 +340,12 @@ class Spider:
             for weibos in self.get_weibo_info(keys):
                 self.write_weibo(weibos)
                 self.got_num += len(weibos)
+                # 查找转发树
+                for weibo in weibos:
+                    print("weibo.id: ", weibo.id)
+                    print("scene: ", scene)
+                    structure_tree(weibo.id,scene)
+                time.sleep(500)
             if not self.filter:
                 logger.info(u'共爬取' + str(self.got_num) + u'条微博')
             else:

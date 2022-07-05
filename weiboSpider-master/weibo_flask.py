@@ -32,9 +32,8 @@ def mil_keyword():
     # 请求进来 输入爬取内容
     # taobao_details.get_detail(keys)#这里就是你的爬虫程序接入口
     # 爬虫程序
-    keys = "28"
+    keys = "俄"
     scene = "D:\data\spidertest"
-
     #cmd = 'python -m weibo_spider' + ' --keyword ' + keys + " --scene " + scene
     # cmd = 'python -m test' + ' --keyword ' + keys + " --scene " + scene
     cmd = 'python -m weibo_spider' + ' ' + keys + ' ' + scene
